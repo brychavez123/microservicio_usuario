@@ -1,4 +1,4 @@
-# ms-usuarios — Sistema de Foros en Línea
+# microservicio-usuarios — Sistema de Foros en Línea
 
 Microservicio de **control de usuarios** (crear, modificar, eliminar) e **inicio de sesión**.
 Desarrollo Full Stack III (DSY2205) — Experiencia 1, Sumativa "Programando nuestro BackEnd".
@@ -82,6 +82,3 @@ Ejemplo `POST /api/usuarios`:
 ```
 
 Códigos de respuesta: `200`, `201` (creado), `400` (validación), `401` (sin login o credenciales malas), `403` (sin permisos para tu rol), `404` (no existe), `409` (email duplicado).
-
-## Postman
-Importa [`postman/ms-usuarios.postman_collection.json`](postman/ms-usuarios.postman_collection.json). Las credenciales de cada rol ya están como variables de la colección, y cada petición incluye tests del código de estado.
