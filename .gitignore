@@ -1,0 +1,24 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# Credenciales y Wallet de Oracle Cloud (NUNCA subir a Git)
+db.properties
+Wallet_*/
+wallet/
+*.sso
+*.p12
+*.jks
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+
+# SO
+.DS_Store
+Thumbs.db
+*.log
