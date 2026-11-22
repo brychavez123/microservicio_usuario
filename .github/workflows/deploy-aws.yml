@@ -1,0 +1,185 @@
+name: Publicar en ECR y desplegar en EC2
+
+# Cada push a main: tests -> imagen Docker en Amazon ECR -> despliegue en la EC2 por Systems Manager.
+# Configuración del servicio (nombre y puertos): aws/servicio.env
+#
+# Secrets del repo:   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN
+# Variables del repo: AWS_REGION (opcional), EC2_INSTANCE_ID,
+#                     ORACLE_CREDENTIALS_SECRET_ARN, ORACLE_WALLET_S3_BUCKET, ORACLE_WALLET_S3_KEY
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-aws-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Tests y publicación en ECR
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+    outputs:
+      image: ${{ steps.imagen.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Leer configuración del servicio
+        run: grep -E '^[A-Z_]+=' aws/servicio.env >> "$GITHUB_ENV"
+
+      - name: Instalar Java 21
+        if: hashFiles('pom.xml') != ''
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Compilar y ejecutar tests (Maven)
+        if: hashFiles('pom.xml') != ''
+        run: |
+          sed -i 's/\r$//' mvnw && chmod +x mvnw
+          ./mvnw -B -q verify
+
+      - name: Instalar Node 22
+        if: hashFiles('package.json') != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Compilar Angular
+        if: hashFiles('package.json') != ''
+        run: |
+          npm ci
+          npx ng build --configuration production
+
+      - name: Credenciales de AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Crear el repositorio ECR si no existe
+        run: |
+          aws ecr describe-repositories --repository-names "$SERVICE_NAME" >/dev/null 2>&1 || \
+            aws ecr create-repository --repository-name "$SERVICE_NAME" \
+              --image-tag-mutability IMMUTABLE \
+              --image-scanning-configuration scanOnPush=true >/dev/null
+
+      - name: Login en ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: ¿Ya existe la imagen de este commit?
+        id: existe
+        run: |
+          if aws ecr describe-images --repository-name "$SERVICE_NAME" --image-ids imageTag="$GITHUB_SHA" >/dev/null 2>&1; then
+            echo "si=true" >> "$GITHUB_OUTPUT"; echo "La imagen ya existe; se reutiliza."
+          else
+            echo "si=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: docker/setup-buildx-action@v3
+        if: steps.existe.outputs.si != 'true'
+
+      - name: Construir y publicar la imagen
+        if: steps.existe.outputs.si != 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.ecr.outputs.registry }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Referencia de la imagen
+        id: imagen
+        run: echo "image=${{ steps.ecr.outputs.registry }}/${SERVICE_NAME}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: Despliegue en EC2 (Systems Manager)
+    needs: publish
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: agora-ec2-deploy
+      cancel-in-progress: false
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      EC2_INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
+      SECRET_ARN: ${{ vars.ORACLE_CREDENTIALS_SECRET_ARN }}
+      WALLET_BUCKET: ${{ vars.ORACLE_WALLET_S3_BUCKET }}
+      WALLET_KEY: ${{ vars.ORACLE_WALLET_S3_KEY }}
+      IMAGE_URI: ${{ needs.publish.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Leer configuración del servicio
+        run: grep -E '^[A-Z_]+=' aws/servicio.env >> "$GITHUB_ENV"
+
+      - name: Credenciales de AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Validar variables
+        run: |
+          if [[ ! "$EC2_INSTANCE_ID" =~ ^i-[0-9a-f]{8,17}$ ]]; then
+            echo "::error::Crea la variable EC2_INSTANCE_ID (Settings > Secrets and variables > Actions > Variables)."; exit 1
+          fi
+          if [[ "$NEEDS_DB" == "true" ]]; then
+            [[ "$SECRET_ARN" =~ ^arn:aws:secretsmanager: ]] || { echo "::error::Falta la variable ORACLE_CREDENTIALS_SECRET_ARN."; exit 1; }
+            [[ -n "$WALLET_BUCKET" && -n "$WALLET_KEY" ]] || { echo "::error::Faltan ORACLE_WALLET_S3_BUCKET y ORACLE_WALLET_S3_KEY."; exit 1; }
+          else
+            SECRET_ARN=""; WALLET_BUCKET=""; WALLET_KEY=""
+            echo "SECRET_ARN=" >> "$GITHUB_ENV"; echo "WALLET_BUCKET=" >> "$GITHUB_ENV"; echo "WALLET_KEY=" >> "$GITHUB_ENV"
+          fi
+
+      - name: Desplegar y probar
+        run: |
+          script_b64="$(base64 -w0 aws/deploy-ec2.sh)"
+          comando="echo $script_b64 | base64 -d > /tmp/deploy-$SERVICE_NAME.sh && bash /tmp/deploy-$SERVICE_NAME.sh '$SERVICE_NAME' '$IMAGE_URI' '$HOST_PORT' '$CONTAINER_PORT' '$HEALTH_PATH' '$AWS_REGION' '$SECRET_ARN' '$WALLET_BUCKET' '$WALLET_KEY'"
+          jq -n --arg c "$comando" '{commands: [$c]}' > params.json
+
+          command_id="$(aws ssm send-command \
+            --instance-ids "$EC2_INSTANCE_ID" \
+            --document-name AWS-RunShellScript \
+            --comment "Deploy $SERVICE_NAME ${GITHUB_SHA::7}" \
+            --parameters file://params.json \
+            --timeout-seconds 600 \
+            --query Command.CommandId --output text)"
+          echo "SSM command: $command_id"
+
+          # Espera hasta 10 minutos (descarga de la imagen + arranque de Spring Boot)
+          for i in $(seq 1 120); do
+            sleep 5
+            resultado="$(aws ssm get-command-invocation --command-id "$command_id" --instance-id "$EC2_INSTANCE_ID" 2>/dev/null || echo '{"Status":"Pending"}')"
+            estado="$(echo "$resultado" | jq -r '.Status')"
+            [[ "$estado" =~ ^(Pending|InProgress|Delayed)$ ]] || break
+          done
+          echo "$resultado" | jq -r '.StandardOutputContent'
+          echo "$resultado" | jq -r '.StandardErrorContent' >&2
+          estado="$(echo "$resultado" | jq -r '.Status')"
+          echo "Estado: $estado"
+          [[ "$estado" == "Success" ]]
+
+      - name: URL pública
+        run: |
+          ip="$(aws ec2 describe-instances --instance-ids "$EC2_INSTANCE_ID" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)"
+          echo "### $SERVICE_NAME desplegado en http://$ip:$HOST_PORT" >> "$GITHUB_STEP_SUMMARY"
+          echo "http://$ip:$HOST_PORT"
