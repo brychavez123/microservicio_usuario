@@ -42,7 +42,7 @@ INSERT INTO ROL (NOMBRE) VALUES ('ADMIN');
 -- admin@foro.cl (Admin123!) · moderador@foro.cl (Modera123!)
 -- sofia@foro.cl (Sofia123!) · diego@foro.cl (Diego123!) · valentina@foro.cl (Valen123!)
 INSERT INTO USUARIO (NOMBRE, EMAIL, PASSWORD, ROL_ID)
-VALUES ('Administrador Ágora', 'admin@foro.cl',
+VALUES ('Administrador Foro', 'admin@foro.cl',
         '$2a$10$L1glYHUOTYtXor54N2KVHOk0XSS9JHJAAOhrIiIzv1E6Ud2V8/3ne',
         (SELECT ID FROM ROL WHERE NOMBRE = 'ADMIN'));
 

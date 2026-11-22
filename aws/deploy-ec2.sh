@@ -10,7 +10,7 @@ NOMBRE="${1:?nombre requerido}"; IMAGEN="${2:?imagen requerida}"
 PUERTO_HOST="${3:?puerto host requerido}"; PUERTO_CONTENEDOR="${4:?puerto contenedor requerido}"
 HEALTH="${5:?ruta health requerida}"; REGION="${6:?region requerida}"
 SECRET_ARN="${7:-}"; BUCKET="${8:-}"; WALLET_KEY="${9:-}"
-BASE=/opt/agora
+BASE=/opt/foro
 mkdir -p "$BASE" && chmod 700 "$BASE"
 
 if [[ ! "$NOMBRE" =~ ^[a-z0-9][a-z0-9-]*$ || ! "$PUERTO_HOST" =~ ^[0-9]+$ || ! "$PUERTO_CONTENEDOR" =~ ^[0-9]+$ \
@@ -19,7 +19,7 @@ if [[ ! "$NOMBRE" =~ ^[a-z0-9][a-z0-9-]*$ || ! "$PUERTO_HOST" =~ ^[0-9]+$ || ! "
 fi
 
 # Credenciales de Docker temporales (no quedan guardadas en el disco de la EC2)
-export DOCKER_CONFIG="$(mktemp -d /tmp/agora-docker.XXXXXX)"
+export DOCKER_CONFIG="$(mktemp -d /tmp/foro-docker.XXXXXX)"
 ENV_FILE=""
 limpiar() { rm -rf -- "$DOCKER_CONFIG"; [[ -n "$ENV_FILE" ]] && rm -f -- "$ENV_FILE"; return 0; }
 
@@ -51,7 +51,7 @@ PY
   chmod -R a+rX "$WALLET_DIR"
 
   echo ">> Leyendo credenciales de Secrets Manager (no se imprimen)"
-  ENV_FILE="$(mktemp /tmp/agora-env.XXXXXX)"
+  ENV_FILE="$(mktemp /tmp/foro-env.XXXXXX)"
   aws secretsmanager get-secret-value --secret-id "$SECRET_ARN" --region "$REGION" \
     --query SecretString --output text \
     | python3 -c '
