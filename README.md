@@ -100,3 +100,14 @@ docker run -p 8081:8081 --env-file db.properties -e DB_WALLET_PATH=/app/wallet -
 `.github/workflows/deploy-aws.yml` corre los tests, publica la imagen en **Amazon ECR** y la despliega en la **EC2** por Systems Manager en cada push a `main`. Conserva el contenedor anterior hasta que el nuevo responde (rollback) y termina con una prueba desde internet a través de Nginx. El nombre, el puerto y las rutas de prueba están en `aws/servicio.env`.
 
 Paso a paso completo (CloudFormation, Secrets Manager, S3 y GitHub): [MANUAL-DESPLIEGUE.md](https://github.com/brychavez123/frontend_foro/blob/main/MANUAL-DESPLIEGUE.md).
+
+## Pruebas con Postman
+
+Colección: [`postman/ms-usuarios.postman_collection.json`](postman/ms-usuarios.postman_collection.json) (12 peticiones).
+
+1. En Postman: **Import** y arrastra el archivo.
+2. Cada petición ya trae la URL pública (`http://100.27.17.133`), los parámetros, el body JSON y la autenticación Basic del usuario de prueba que corresponde.
+3. Las peticiones que modifican o eliminan algo recién creado usan un id fijo: cámbialo por el `id` que devolvió el POST.
+4. Si la EC2 se reinicia cambia la IP: reemplázala en todo el archivo.
+
+Incluye los casos de error esperados (400 validaciones, 401 sin login, 403 rol sin permiso).

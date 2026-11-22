@@ -1,0 +1,489 @@
+{
+  "info": {
+    "name": "Bralomeo Foro - ms-usuarios",
+    "description": "Microservicio de usuarios (puerto 8081, publicado por Nginx en /api/usuarios).\n\nSistema de Foros en Línea (DSY2205). Los 3 microservicios Spring Boot corren como contenedores Docker en una EC2 de AWS y Nginx los publica en http://100.27.17.133. Base de datos: Oracle Autonomous DB.\n\nAutenticación HTTP Basic (ya configurada en cada petición):\n- admin@foro.cl / Admin123! (ADMIN)\n- moderador@foro.cl / Modera123! (MODERADOR)\n- sofia@foro.cl / Sofia123! y diego@foro.cl / Diego123! (USUARIO)\n\nSi la EC2 se reinicia, la IP cambia: reemplázala con Ctrl+Shift+F en Postman o en el JSON.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Login (admin)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "http://100.27.17.133/api/usuarios/login",
+          "protocol": "http",
+          "host": [
+            "100",
+            "27",
+            "17",
+            "133"
+          ],
+          "path": [
+            "api",
+            "usuarios",
+            "login"
+          ]
+        },
+        "description": "Inicio de sesión. Público. Devuelve los datos del usuario y su rol.",
+        "auth": {
+          "type": "noauth"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@foro.cl\",\n  \"password\": \"Admin123!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Login con contraseña incorrecta (401)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "http://100.27.17.133/api/usuarios/login",
+          "protocol": "http",
+          "host": [
+            "100",
+            "27",
+            "17",
+            "133"
+          ],
+          "path": [
+            "api",
+            "usuarios",
+            "login"
+          ]
+        },
+        "description": "Debe responder 401: credenciales inválidas.",
+        "auth": {
+          "type": "noauth"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@foro.cl\",\n  \"password\": \"Incorrecta1!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Registrar usuario (crear)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "http://100.27.17.133/api/usuarios",
+          "protocol": "http",
+          "host": [
+            "100",
+            "27",
+            "17",
+            "133"
+          ],
+          "path": [
+            "api",
+            "usuarios"
+          ]
+        },
+        "description": "Registro público. Sin rol se asigna USUARIO. Guarda en Oracle y devuelve 201 con el id.",
+        "auth": {
+          "type": "noauth"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Martina Rojas\",\n  \"email\": \"martina@foro.cl\",\n  \"password\": \"Martina123!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Registrar con datos inválidos (400)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "http://100.27.17.133/api/usuarios",
+          "protocol": "http",
+          "host": [
+            "100",
+            "27",
+            "17",
+            "133"
+          ],
+          "path": [
+            "api",
+            "usuarios"
+          ]
+        },
+        "description": "Muestra las validaciones de Bean Validation: nombre, email y contraseña.",
+        "auth": {
+          "type": "noauth"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Al\",\n  \"email\": \"correo-malo\",\n  \"password\": \"123\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Listar usuarios (ADMIN)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://100.27.17.133/api/usuarios",
+          "protocol": "http",
+          "host": [
+            "100",
+            "27",
+            "17",
+            "133"
+          ],
+          "path": [
+            "api",
+            "usuarios"
+          ]
+        },
+        "description": "",
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "username",
+              "value": "admin@foro.cl",
+              "type": "string"
+            },
+            {
+              "key": "password",
+              "value": "Admin123!",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Obtener usuario por id",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://100.27.17.133/api/usuarios/6",
+          "protocol": "http",
+          "host": [
+            "100",
+            "27",
+            "17",
+            "133"
+          ],
+          "path": [
+            "api",
+            "usuarios",
+            "6"
+          ]
+        },
+        "description": "Cambia el id de la URL por el que devolvió la petición de creación.",
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "username",
+              "value": "admin@foro.cl",
+              "type": "string"
+            },
+            {
+              "key": "password",
+              "value": "Admin123!",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Listar por rol",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://100.27.17.133/api/usuarios/rol/USUARIO",
+          "protocol": "http",
+          "host": [
+            "100",
+            "27",
+            "17",
+            "133"
+          ],
+          "path": [
+            "api",
+            "usuarios",
+            "rol",
+            "USUARIO"
+          ]
+        },
+        "description": "",
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "username",
+              "value": "admin@foro.cl",
+              "type": "string"
+            },
+            {
+              "key": "password",
+              "value": "Admin123!",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Buscar por nombre",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://100.27.17.133/api/usuarios/buscar?nombre=sofia",
+          "protocol": "http",
+          "host": [
+            "100",
+            "27",
+            "17",
+            "133"
+          ],
+          "path": [
+            "api",
+            "usuarios",
+            "buscar"
+          ],
+          "query": [
+            {
+              "key": "nombre",
+              "value": "sofia"
+            }
+          ]
+        },
+        "description": "",
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "username",
+              "value": "admin@foro.cl",
+              "type": "string"
+            },
+            {
+              "key": "password",
+              "value": "Admin123!",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Modificar usuario",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "http://100.27.17.133/api/usuarios/6",
+          "protocol": "http",
+          "host": [
+            "100",
+            "27",
+            "17",
+            "133"
+          ],
+          "path": [
+            "api",
+            "usuarios",
+            "6"
+          ]
+        },
+        "description": "Cambia el id de la URL por el que devolvió la petición de creación.",
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "username",
+              "value": "admin@foro.cl",
+              "type": "string"
+            },
+            {
+              "key": "password",
+              "value": "Admin123!",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Martina Rojas Pérez\",\n  \"email\": \"martina@foro.cl\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Eliminar usuario (ADMIN)",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "http://100.27.17.133/api/usuarios/6",
+          "protocol": "http",
+          "host": [
+            "100",
+            "27",
+            "17",
+            "133"
+          ],
+          "path": [
+            "api",
+            "usuarios",
+            "6"
+          ]
+        },
+        "description": "Cambia el id de la URL por el que devolvió la petición de creación.",
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "username",
+              "value": "admin@foro.cl",
+              "type": "string"
+            },
+            {
+              "key": "password",
+              "value": "Admin123!",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Listar sin autenticación (401)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://100.27.17.133/api/usuarios",
+          "protocol": "http",
+          "host": [
+            "100",
+            "27",
+            "17",
+            "133"
+          ],
+          "path": [
+            "api",
+            "usuarios"
+          ]
+        },
+        "description": "Seguridad: sin credenciales responde 401.",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Listar con rol USUARIO (403)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://100.27.17.133/api/usuarios",
+          "protocol": "http",
+          "host": [
+            "100",
+            "27",
+            "17",
+            "133"
+          ],
+          "path": [
+            "api",
+            "usuarios"
+          ]
+        },
+        "description": "Seguridad: un USUARIO no puede listar usuarios, responde 403.",
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "username",
+              "value": "sofia@foro.cl",
+              "type": "string"
+            },
+            {
+              "key": "password",
+              "value": "Sofia123!",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
