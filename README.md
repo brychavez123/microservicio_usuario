@@ -82,3 +82,17 @@ Ejemplo `POST /api/usuarios`:
 ```
 
 Códigos de respuesta: `200`, `201` (creado), `400` (validación), `401` (sin login o credenciales malas), `403` (sin permisos para tu rol), `404` (no existe), `409` (email duplicado).
+
+## Usuarios de prueba (db/01_usuarios.sql)
+| Rol | Email | Contraseña |
+|---|---|---|
+| ADMIN | admin@foro.cl | Admin123! |
+| MODERADOR | moderador@foro.cl | Modera123! |
+| USUARIO | sofia@foro.cl · diego@foro.cl · valentina@foro.cl | Sofia123! · Diego123! · Valen123! |
+
+## Docker
+```bash
+docker build -t ms-usuarios .
+docker run -p 8081:8081 --env-file db.properties -e DB_WALLET_PATH=/app/wallet -v ./Wallet_NOMBRE:/app/wallet:ro ms-usuarios
+```
+El workflow `.github/workflows/docker-publish.yml` publica la imagen en Docker Hub en cada push a `main` (necesita los secrets `DOCKERHUB_USERNAME` y `DOCKERHUB_TOKEN`).
