@@ -1,0 +1,5 @@
+# Copia este archivo como db.properties (no se sube a Git)
+DB_TNS_NAME=nombre_high
+DB_WALLET_PATH=./Wallet_NOMBRE
+DB_USERNAME=ADMIN
+DB_PASSWORD=tu_password
