@@ -97,4 +97,6 @@ docker run -p 8081:8081 --env-file db.properties -e DB_WALLET_PATH=/app/wallet -
 ```
 
 ## Despliegue en AWS
-El workflow `.github/workflows/deploy-aws.yml` corre los tests, publica la imagen en **Amazon ECR** y la despliega en la **EC2** por Systems Manager en cada push a `main`. El nombre y el puerto del servicio están en `aws/servicio.env`. Paso a paso: `aws/DESPLIEGUE_AWS.md` en la carpeta raíz del proyecto.
+`.github/workflows/deploy-aws.yml` corre los tests, publica la imagen en **Amazon ECR** y la despliega en la **EC2** por Systems Manager en cada push a `main`. Conserva el contenedor anterior hasta que el nuevo responde (rollback) y termina con una prueba desde internet a través de Nginx. El nombre, el puerto y las rutas de prueba están en `aws/servicio.env`.
+
+Paso a paso completo (CloudFormation, Secrets Manager, S3 y GitHub): [MANUAL-DESPLIEGUE.md](https://github.com/brychavez123/frontend_foro/blob/main/MANUAL-DESPLIEGUE.md).
