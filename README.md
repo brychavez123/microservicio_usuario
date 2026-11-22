@@ -95,4 +95,6 @@ Códigos de respuesta: `200`, `201` (creado), `400` (validación), `401` (sin lo
 docker build -t ms-usuarios .
 docker run -p 8081:8081 --env-file db.properties -e DB_WALLET_PATH=/app/wallet -v ./Wallet_NOMBRE:/app/wallet:ro ms-usuarios
 ```
-El workflow `.github/workflows/docker-publish.yml` publica la imagen en Docker Hub en cada push a `main` (necesita los secrets `DOCKERHUB_USERNAME` y `DOCKERHUB_TOKEN`).
+
+## Despliegue en AWS
+El workflow `.github/workflows/deploy-aws.yml` corre los tests, publica la imagen en **Amazon ECR** y la despliega en la **EC2** por Systems Manager en cada push a `main`. El nombre y el puerto del servicio están en `aws/servicio.env`. Paso a paso: `aws/DESPLIEGUE_AWS.md` en la carpeta raíz del proyecto.
